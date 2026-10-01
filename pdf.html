@@ -1,0 +1,1645 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Math PDF Blogger</title>
+
+</head>
+
+<body>
+
+
+<script>
+
+/*    MathPdf.create({
+    
+     ---- target:"#math-pdf-box" dung cho modal-----
+   
+     target:"#math-pdf-box",
+
+    title:title,
+
+    data:data,
+
+    -----------
+        true:
+        PDF có đáp án cuối file
+
+        false:
+        chỉ có đề
+    -----------
+
+    showAnswers:true,
+
+
+  
+    ------    Có thể đổi hoặc bỏ ""------------
+
+
+    watermark:
+        "© TOANHAY.VN",
+
+
+    footer:
+        "© 2026 TOANHAY.VN"
+
+
+});*/
+
+/* =========================================================
+   PLUGIN MATH PDF
+========================================================= */
+
+(function(window, document){
+
+    "use strict";
+
+
+    const MathPdf = {
+
+
+        /* =====================================================
+           CẤU HÌNH MẶC ĐỊNH
+        ===================================================== */
+
+        config:{
+
+            title:"Bài tập Toán",
+
+            data:[],
+
+            showAnswers:true,
+
+            mainTitle:"BÀI TẬP TOÁN",
+
+            watermark:"© TOANHAY.VN",
+
+            footer:"© 2026 TOANHAY.VN",
+
+            buttonText:"Tải PDF bài tập",
+
+            target:null
+
+        },
+
+
+        /* =====================================================
+           KHỞI TẠO
+        ===================================================== */
+
+        create(options = {}){
+
+
+            this.config = {
+
+                ...this.config,
+
+                ...options
+
+            };
+
+
+            if(
+                !Array.isArray(
+                    this.config.data
+                )
+            ){
+
+                console.error(
+                    "MathPdf: data phải là array"
+                );
+
+                return;
+
+            }
+
+
+
+            /* =================================================
+               TỰ TẠO TARGET TỪ TITLE
+            ================================================= */
+
+
+            const autoId =
+
+                "math-pdf-" +
+
+                this.slugify(
+                    this.config.title
+                );
+
+
+            let target =
+
+                document.getElementById(
+                    autoId
+                );
+
+
+
+            if(!target){
+
+                target =
+
+                    document.createElement(
+                        "div"
+                    );
+
+
+                target.id =
+                    autoId;
+
+
+                document.body.appendChild(
+                    target
+                );
+
+            }
+
+
+            this.config.target =
+                "#" + autoId;
+
+
+
+            /* =================================================
+               LOAD HTML2PDF
+            ================================================= */
+
+
+            this.loadHtml2Pdf(()=>{
+
+
+                this.injectCSS();
+
+
+                this.render();
+
+
+            });
+
+
+        },
+
+
+
+        /* =====================================================
+           LOAD HTML2PDF
+        ===================================================== */
+
+        loadHtml2Pdf(callback){
+
+
+            if(window.html2pdf){
+
+                callback();
+
+                return;
+
+            }
+
+
+            const script =
+
+                document.createElement(
+                    "script"
+                );
+
+
+            script.src =
+
+                "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+
+
+            script.onload =
+                callback;
+
+
+            script.onerror =
+                function(){
+
+                    console.error(
+                        "Không tải được html2pdf.js"
+                    );
+
+                };
+
+
+            document.head.appendChild(
+                script
+            );
+
+        },
+
+
+
+        /* =====================================================
+           CSS
+        ===================================================== */
+
+        injectCSS(){
+
+
+            if(
+                document.getElementById(
+                    "math-pdf-style"
+                )
+            ){
+
+                return;
+
+            }
+
+
+            const style =
+
+                document.createElement(
+                    "style"
+                );
+
+
+            style.id =
+                "math-pdf-style";
+
+
+            style.textContent = `
+
+
+                .math-pdf-wrapper{
+
+                    font-family:
+                        "Times New Roman",
+                        serif;
+
+                    width:100%;
+
+                }
+
+
+
+                /* =========================
+                   TOOLBAR
+                ========================= */
+
+                .math-pdf-toolbar{
+
+                    text-align:center;
+
+                    margin:15px 0 20px;
+
+                }
+
+
+                .math-pdf-download{
+
+                    border:0;
+
+                    outline:none;
+
+                    background:#1677ff;
+
+                    color:#fff;
+
+                    font-size:16px;
+
+                    font-weight:700;
+
+                    padding:11px 22px;
+
+                    border-radius:8px;
+
+                    cursor:pointer;
+
+                    transition:.2s;
+
+                }
+
+
+                .math-pdf-download:hover{
+
+                    background:#0958d9;
+
+                }
+
+
+                .math-pdf-download:active{
+
+                    transform:scale(.98);
+
+                }
+
+
+
+                /* =========================
+                   PDF CONTENT
+                ========================= */
+
+                .math-pdf-content{
+
+                    width:210mm;
+
+                    min-height:297mm;
+
+                    max-width:100%;
+
+                    margin:0 auto;
+
+                    padding:0 15mm;
+
+                    background:#fff;
+
+                    color:#000;
+
+                    font-size:15px;
+
+                    line-height:1.5;
+
+                    box-sizing:border-box;
+
+                }
+
+
+
+                /* =========================
+                   TITLE
+                ========================= */
+
+                .math-pdf-title{
+
+                    text-align:center;
+
+                    font-size:22px;
+
+                    font-weight:700;
+
+                    margin:0 0 5px;
+
+                }
+
+
+                .math-pdf-subtitle{
+
+                    text-align:center;
+
+                    font-size:16px;
+
+                    font-weight:600;
+
+                    margin-bottom:18px;
+
+                }
+
+
+
+                /* =========================
+                   STUDENT
+                ========================= */
+
+                .math-pdf-student{
+                    display:grid;
+
+                    grid-template-columns: 68% 32%;
+
+                    align-items:center;
+
+                    width:100%;
+
+                    margin-bottom:20px;
+
+                    font-size:15px;
+
+                    column-gap:8mm;
+                }
+
+                .math-pdf-student-name,
+                .math-pdf-student-class{
+                    display:flex;
+                    align-items:center;
+                    min-width:0;
+                }
+
+                .math-pdf-student-name{
+                    padding-left:2mm;
+                }
+
+                .math-pdf-student-class{
+                    padding-right:8mm;
+                }
+
+                .math-pdf-student-name::after,
+                .math-pdf-student-class::after{
+                    content:"";
+
+                    flex:1;
+
+                    margin-left:8px;
+
+                    border-bottom:1px dotted #444;
+
+                    height:1em;
+                }
+
+
+
+                /* =========================
+                   QUESTIONS
+                ========================= */
+
+                .math-pdf-question-list{
+
+                    width:100%;
+
+                }
+
+
+                .math-pdf-question{
+
+                    width:100%;
+
+                    margin-bottom:13px;
+
+                    break-inside:avoid;
+
+                    page-break-inside:avoid;
+
+                }
+
+
+                .math-pdf-question-number{
+
+                    font-weight:700;
+
+                }
+
+
+
+                /* =========================
+                   ANSWER LINE
+                ========================= */
+
+                .math-pdf-answer-line{
+
+                    display:flex;
+
+                    align-items:flex-end;
+
+                    gap:6px;
+
+                    width:100%;
+
+                    margin-top:6px;
+
+                    padding-left:15px;
+
+                }
+
+
+                .math-pdf-answer-label{
+
+                    white-space:nowrap;
+
+                }
+
+
+                .math-pdf-answer-dot{
+
+                    flex:1;
+
+                    display:block;
+
+                    height:18px;
+
+                    border-bottom:
+                        1px dotted #555;
+
+                }
+
+
+
+                /* =========================
+                   ANSWER SECTION
+                ========================= */
+
+                .math-pdf-answer-section{
+
+                    width:100%;
+
+                    break-before:page;
+
+                    page-break-before:always;
+
+                    padding-top:5px;
+
+                }
+
+
+                .math-pdf-answer-title{
+
+                    text-align:center;
+
+                    font-size:20px;
+
+                    font-weight:700;
+
+                    margin-bottom:18px;
+
+                }
+
+
+                .math-pdf-answer-grid{
+
+                    display:grid;
+
+                    grid-template-columns:
+                        1fr
+                        1fr;
+
+                    column-gap:35px;
+
+                    row-gap:8px;
+
+                    width:100%;
+
+                }
+
+
+                .math-pdf-answer-item{
+
+                    font-size:14px;
+
+                    padding:4px 0;
+
+                    break-inside:avoid;
+
+                    page-break-inside:avoid;
+
+                }
+
+
+
+                /* =========================
+                   SCREEN
+                ========================= */
+
+                @media screen{
+
+                    .math-pdf-content{
+
+                        padding-top:12mm;
+
+                        padding-bottom:20mm;
+
+                        box-shadow:
+                            0 3px 18px
+                            rgba(0,0,0,.12);
+
+                    }
+
+                }
+
+
+
+                /* =========================
+                   MOBILE
+                ========================= */
+
+                @media(max-width:800px){
+
+                    .math-pdf-content{
+
+                        width:100%;
+
+                        padding-left:15px;
+
+                        padding-right:15px;
+
+                    }
+
+
+                    .math-pdf-student{
+
+                        gap:10px;
+
+                    }
+
+
+                    .math-pdf-student-class{
+
+                        margin-right:0;
+
+                    }
+
+                }
+
+
+            `;
+
+
+            document.head.appendChild(
+                style
+            );
+
+        },
+
+
+
+        /* =====================================================
+           RENDER
+        ===================================================== */
+
+        render(){
+
+
+            const target =
+
+                document.querySelector(
+                    this.config.target
+                );
+
+
+            if(!target){
+
+                console.error(
+                    "Không tìm thấy target"
+                );
+
+                return;
+
+            }
+
+
+            const wrapper =
+
+                document.createElement(
+                    "div"
+                );
+
+
+            wrapper.className =
+                "math-pdf-wrapper";
+
+
+            wrapper.innerHTML = `
+
+
+                <div class="math-pdf-toolbar">
+
+
+                    <button
+                        type="button"
+                        class="math-pdf-download"
+                    >
+
+                        ${this.escapeHTML(
+                            this.config.buttonText
+                        )}
+
+                    </button>
+
+
+                </div>
+
+
+
+                <div class="math-pdf-content">
+
+
+                    <div class="math-pdf-title">
+
+                        ${this.escapeHTML(
+                            this.config.mainTitle
+                        )}
+
+                    </div>
+
+
+
+                    <div class="math-pdf-subtitle">
+
+                        ${this.escapeHTML(
+                            this.config.title
+                        )}
+
+                    </div>
+
+
+
+                    <div class="math-pdf-student">
+
+                        <div class="math-pdf-student-name">
+                            Họ và tên:
+                        </div>
+
+                        <div class="math-pdf-student-class">
+                            Lớp:
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="math-pdf-question-list">
+
+                        ${this.renderQuestions()}
+
+                    </div>
+
+
+
+                    ${this.renderAnswers()}
+
+
+                </div>
+
+
+            `;
+
+
+            target.innerHTML =
+                "";
+
+
+            target.appendChild(
+                wrapper
+            );
+
+
+            const button =
+
+                wrapper.querySelector(
+                    ".math-pdf-download"
+                );
+
+
+            button.addEventListener(
+                "click",
+                ()=>{
+
+                    this.download(
+                        wrapper
+                    );
+
+                }
+            );
+
+        },
+
+
+
+        /* =====================================================
+           RENDER QUESTIONS
+        ===================================================== */
+
+        renderQuestions(){
+
+
+            return this.config.data
+
+                .map(
+                    (item,index)=>{
+
+
+                        const question =
+
+                            item[0] ?? "";
+
+
+                        return `
+
+
+                            <div class="math-pdf-question">
+
+
+                                <div>
+
+
+                                    <span class="math-pdf-question-number">
+
+                                        Câu ${index + 1}.
+
+                                    </span>
+
+
+                                    ${this.escapeHTML(
+                                        question
+                                    )}
+
+
+                                </div>
+
+
+
+                                <div class="math-pdf-answer-line">
+
+
+                                    <span class="math-pdf-answer-label">
+
+                                        Đáp số:
+
+                                    </span>
+
+
+                                    <span class="math-pdf-answer-dot"></span>
+
+
+                                </div>
+
+
+                            </div>
+
+
+                        `;
+
+                    }
+                )
+
+                .join("");
+
+        },
+
+
+
+        /* =====================================================
+           RENDER ANSWERS
+        ===================================================== */
+
+        renderAnswers(){
+
+
+            if(
+                !this.config.showAnswers
+            ){
+
+                return "";
+
+            }
+
+
+            return `
+
+
+                <div class="math-pdf-answer-section">
+
+
+                    <div class="math-pdf-answer-title">
+
+                        ĐÁP ÁN
+
+                    </div>
+
+
+
+                    <div class="math-pdf-answer-grid">
+
+
+                        ${
+
+                            this.config.data
+
+                            .map(
+                                (item,index)=>`
+
+
+                                    <div class="math-pdf-answer-item">
+
+
+                                        <strong>
+
+                                            Câu ${index + 1}:
+
+                                        </strong>
+
+
+                                        ${this.escapeHTML(
+                                            item[1] ?? ""
+                                        )}
+
+
+                                    </div>
+
+
+                                `
+                            )
+
+                            .join("")
+
+                        }
+
+
+                    </div>
+
+
+                </div>
+
+
+            `;
+
+        },
+
+
+
+        /* =====================================================
+           DOWNLOAD PDF
+        ===================================================== */
+
+        download(wrapper){
+
+
+            const element =
+
+                wrapper.querySelector(
+                    ".math-pdf-content"
+                );
+
+
+            const options = {
+
+
+                /*
+                    Lề PDF:
+
+                    trên  = 12mm
+                    dưới  = 20mm
+
+                    Footer sẽ không
+                    đè lên nội dung.
+                */
+
+                margin:[
+
+                    12,
+
+                    0,
+
+                    20,
+
+                    0
+
+                ],
+
+
+
+                /*
+                    Tự tạo filename
+                    từ title
+                */
+
+                filename:
+
+                    this.createFileName(
+                        this.config.title
+                    ),
+
+
+
+                image:{
+
+                    type:"jpeg",
+
+                    quality:0.98
+
+                },
+
+
+
+                html2canvas:{
+
+                    scale:2,
+
+                    useCORS:true,
+
+                    letterRendering:true,
+
+                    scrollX:0,
+
+                    scrollY:0,
+
+                    backgroundColor:
+                        "#ffffff"
+
+                },
+
+
+
+                jsPDF:{
+
+                    unit:"mm",
+
+                    format:"a4",
+
+                    orientation:"portrait"
+
+                },
+
+
+
+                pagebreak:{
+
+
+                    mode:[
+
+                        "css",
+
+                        "legacy"
+
+                    ],
+
+
+
+                    before:
+
+                        ".math-pdf-answer-section",
+
+
+
+                    avoid:[
+
+                        ".math-pdf-question",
+
+                        ".math-pdf-answer-item"
+
+                    ]
+
+
+                }
+
+
+            };
+
+
+
+            html2pdf()
+
+                .set(options)
+
+                .from(element)
+
+                .toPdf()
+
+                .get("pdf")
+
+                .then(
+                    pdf=>{
+
+
+                        this.addCopyright(
+                            pdf
+                        );
+
+
+                    }
+                )
+
+                .save();
+
+        },
+
+
+
+        /* =====================================================
+           COPYRIGHT + FOOTER
+        ===================================================== */
+
+        addCopyright(pdf){
+
+
+            const totalPages =
+
+                pdf.internal
+                    .getNumberOfPages();
+
+
+            const pageWidth =
+
+                pdf.internal
+                    .pageSize
+                    .getWidth();
+
+
+            const pageHeight =
+
+                pdf.internal
+                    .pageSize
+                    .getHeight();
+
+
+
+            for(
+
+                let page=1;
+
+                page<=totalPages;
+
+                page++
+
+            ){
+
+
+                pdf.setPage(
+                    page
+                );
+
+
+
+                /* =============================================
+                   WATERMARK
+                ============================================= */
+
+                if(
+                    this.config.watermark
+                ){
+
+
+                    pdf.setTextColor(
+
+                        232,
+
+                        232,
+
+                        232
+
+                    );
+
+
+                    pdf.setFont(
+
+                        "helvetica",
+
+                        "bold"
+
+                    );
+
+
+                    pdf.setFontSize(
+                        23
+                    );
+
+
+                    pdf.text(
+
+                        this.config.watermark,
+
+                        pageWidth / 2,
+
+                        pageHeight / 2,
+
+                        {
+
+                            align:"center",
+
+                            angle:35
+
+                        }
+
+                    );
+
+                }
+
+
+
+                /* =============================================
+                   FOOTER LINE
+                ============================================= */
+
+                pdf.setDrawColor(
+
+                    215,
+
+                    215,
+
+                    215
+
+                );
+
+
+                pdf.setLineWidth(
+                    0.2
+                );
+
+
+                pdf.line(
+
+                    15,
+
+                    pageHeight - 14,
+
+                    pageWidth - 15,
+
+                    pageHeight - 14
+
+                );
+
+
+
+                /* =============================================
+                   FOOTER
+                ============================================= */
+
+                pdf.setTextColor(
+
+                    120,
+
+                    120,
+
+                    120
+
+                );
+
+
+                pdf.setFont(
+
+                    "helvetica",
+
+                    "normal"
+
+                );
+
+
+                pdf.setFontSize(
+                    7.5
+                );
+
+
+
+                if(
+                    this.config.footer
+                ){
+
+
+                    pdf.text(
+
+                        this.config.footer,
+
+                        15,
+
+                        pageHeight - 9
+
+                    );
+
+
+                }
+
+
+
+                /* =============================================
+                   PAGE NUMBER
+                ============================================= */
+
+                pdf.text(
+
+                    `Trang ${page} / ${totalPages}`,
+
+                    pageWidth - 15,
+
+                    pageHeight - 9,
+
+                    {
+
+                        align:"right"
+
+                    }
+
+                );
+
+
+            }
+
+        },
+
+
+
+        /* =====================================================
+           SLUGIFY
+        ===================================================== */
+
+        slugify(text){
+
+
+            let result =
+
+                String(
+                    text ||
+                    "bai-tap-toan"
+                );
+
+
+            result = result
+
+                .normalize(
+                    "NFD"
+                )
+
+                .replace(
+
+                    /[\u0300-\u036f]/g,
+
+                    ""
+
+                )
+
+                .replace(
+                    /đ/g,
+                    "d"
+                )
+
+                .replace(
+                    /Đ/g,
+                    "D"
+                )
+
+                .toLowerCase()
+
+                .replace(
+
+                    /[^a-z0-9]+/g,
+
+                    "-"
+
+                )
+
+                .replace(
+
+                    /^-+|-+$/g,
+
+                    ""
+
+                );
+
+
+            return (
+                result ||
+                "bai-tap-toan"
+            );
+
+        },
+
+
+
+        /* =====================================================
+           CREATE FILENAME
+        ===================================================== */
+
+        createFileName(text){
+
+
+            return (
+
+                this.slugify(
+                    text
+                )
+
+                +
+
+                ".pdf"
+
+            );
+
+        },
+
+
+
+        /* =====================================================
+           ESCAPE HTML
+        ===================================================== */
+
+        escapeHTML(value){
+
+
+            return String(
+                value ?? ""
+            )
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+
+    };
+
+
+    window.MathPdf =
+        MathPdf;
+
+
+})(window, document);
+
+
+
+/* =========================================================
+   DATA TRUYỀN VÀO
+========================================================= */
+
+
+/*
+    Chỉ cần thay:
+
+    1. title
+    2. data
+
+    Không cần target.
+*/
+
+
+const title =
+
+    "Ôn tập đơn vị đo - Thời gian - Tiền Việt Nam";
+
+
+
+const data = [
+
+
+    [
+        "1 dm bằng bao nhiêu cm?",
+        "10 cm"
+    ],
+
+
+    [
+        "1 m bằng bao nhiêu dm?",
+        "10 dm"
+    ],
+
+
+    [
+        "1 m bằng bao nhiêu cm?",
+        "100 cm"
+    ],
+
+
+    [
+        "1 km bằng bao nhiêu m?",
+        "1000 m"
+    ],
+
+
+    [
+        "2 m 30 cm bằng bao nhiêu cm?",
+        "230 cm"
+    ],
+
+
+    [
+        "4 dm 5 cm bằng bao nhiêu cm?",
+        "45 cm"
+    ],
+
+
+    [
+        "150 cm bằng 1 m và bao nhiêu cm?",
+        "50 cm"
+    ],
+
+
+    [
+        "350 m còn thiếu bao nhiêu mét để đủ 1 km?",
+        "650 m"
+    ],
+
+
+    [
+        "Đoạn A dài 45 cm, đoạn B dài 28 cm. A dài hơn B bao nhiêu?",
+        "17 cm"
+    ],
+
+
+    [
+        "Hai đoạn 35 cm và 45 cm có tổng dài bao nhiêu?",
+        "80 cm"
+    ],
+
+
+    [
+        "Bao 32 kg và 25 kg có tổng bao nhiêu?",
+        "57 kg"
+    ],
+
+
+    [
+        "60 kg bớt 18 kg còn bao nhiêu?",
+        "42 kg"
+    ],
+
+
+    [
+        "Can 45 l thêm 27 l có bao nhiêu?",
+        "72 l"
+    ],
+
+
+    [
+        "90 l dùng 36 l còn bao nhiêu?",
+        "54 l"
+    ],
+
+
+    [
+        "3 tuần có bao nhiêu ngày?",
+        "21 ngày"
+    ],
+
+
+    [
+        "2 giờ bằng bao nhiêu phút?",
+        "120 phút"
+    ],
+
+
+    [
+        "7 giờ 30 phút sau 30 phút là mấy giờ?",
+        "8 giờ"
+    ],
+
+
+    [
+        "Một món 18 000 đồng, trả 20 000 đồng, thừa bao nhiêu?",
+        "2000 đồng"
+    ],
+
+
+    [
+        "Hai tờ 20 000 đồng và một tờ 5 000 đồng có bao nhiêu tiền?",
+        "45000 đồng"
+    ],
+
+
+    [
+        "Một đoạn 2 m và đoạn 80 cm. Đoạn nào dài hơn?",
+        "2 m"
+    ]
+
+
+];
+
+
+
+/* =========================================================
+   CHẠY PLUGIN
+========================================================= */
+
+MathPdf.create({
+    /*
+        target:"#math-pdf-box" dung cho modal
+    */
+     target:"#math-pdf-box",
+
+    title:title,
+
+    data:data,
+
+    /*
+        true:
+        PDF có đáp án cuối file
+
+        false:
+        chỉ có đề
+    */
+
+    showAnswers:true,
+
+
+    /*
+        Có thể đổi hoặc bỏ ""
+    */
+
+    watermark:
+        "© TOANHAY.VN",
+
+
+    footer:
+        "© 2026 TOANHAY.VN"
+
+
+});
+
+</script>
+
+
+</body>
+</html>
