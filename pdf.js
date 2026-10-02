@@ -1438,20 +1438,54 @@
             );
 
         }
+
+
+
         cleanQuestion(str) {
-    const textarea = document.createElement("textarea");
-    textarea.innerHTML = str || "";
 
-    let value = textarea.value;
+    let value = String(str ?? "");
 
+    // Decode HTML entity nhiều lớp
+    // Ví dụ:
+    // &amp;#x110;  -> &#x110; -> Đ
+    for (let i = 0; i < 3; i++) {
+
+        const textarea = document.createElement("textarea");
+
+        textarea.innerHTML = value;
+
+        const decoded = textarea.value;
+
+        // Nếu không còn gì để decode thì dừng
+        if (decoded === value) {
+            break;
+        }
+
+        value = decoded;
+    }
+
+    // Làm sạch dữ liệu
     value = value
+
+        // Bỏ markdown **
         .replace(/\*\*/g, "")
+
+        // NBSP -> space thường
         .replace(/\u00A0/g, " ")
-        .replace(/\s+/g, " ")
+
+        // Xóa zero-width character nếu có
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+
+        // Gom nhiều khoảng trắng
+        .replace(/[ \t]+/g, " ")
+
+        // Bỏ khoảng trắng đầu cuối
         .trim();
 
     return value;
 }
+
+      
 
     };
 
