@@ -777,9 +777,8 @@
                                     </span>
 
 
-                                    ${this.escapeHTML(
-                                        question || ""
-                                    )}
+                                   ${this.escapeHTML(this.cleanQuestion(question || ""))}
+                         
 
 
                                 </div>
@@ -1439,6 +1438,20 @@
             );
 
         }
+        cleanQuestion(str) {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = str || "";
+
+    let value = textarea.value;
+
+    value = value
+        .replace(/\*\*/g, "")
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return value;
+}
 
     };
 
